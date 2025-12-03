@@ -1,1 +1,106 @@
-haha
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>Trend Linker</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; height: 100vh; display: grid; place-items: center; font-family: 'Roboto Mono', monospace; background:#1a1a1a; color:#e0e0e0; }
+        #app { background:#2d2d2d; padding:20px; border-radius:8px; width:360px; display:flex; flex-direction:column; gap:14px; }
+        .grid-container { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+        .input-group { display:flex; flex-direction:column; gap:6px; }
+        label { font-size:0.72em; color:#9aa0a6; text-transform:uppercase; letter-spacing:0.04em; }
+        input { background:#3d3d3d; border:1px solid #4d4d4d; color:#fff; padding:10px; width:100%; font-family:inherit; font-size:0.95rem; border-radius:4px; }
+        button { background:#007bff; color:white; border:none; padding:12px; cursor:pointer; width:100%; font-weight:bold; border-radius:6px; }
+        button:hover { filter:brightness(1.1); }
+        
+        /* Tag Buttons Styles */
+        .tags { display: flex; gap: 5px;}
+        .tag-btn { background:#444; color:#aaa; padding: 4px; flex:1; font-size: 0.75rem; text-align: center; border-radius: 4px; cursor: pointer; border:1px solid #555; }
+        .tag-btn.active { background:#4fc3f7; color:#000; border-color:#4fc3f7; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="grid-container">
+            
+            <div class="input-group"><label>Time 1 (MMDD-HHMM)</label><input id="t1" value="1201-2345"/></div>
+            <div class="input-group"><label>Price 1</label><input id="p1" value="83910.8"/></div>
+            <div class="input-group"><label>Time 2 (MMDD-HHMM)</label><input id="t2" value="1202-1700"/></div>
+            <div class="input-group"><label>Price 2</label><input id="p2" value="86414.4"/></div>
+            <div class="input-group"><label>Symbol</label><input id="symbol" value="BTCUSDT"/></div>
+            
+            <div class="input-group">
+                <label>Tag & Deploy</label>
+                <div class="tags">
+                    <div class="tag-btn" onclick="selTag(this, '5')">5</div>
+                    <div class="tag-btn" onclick="selTag(this, '15')">15</div>
+                    <div class="tag-btn" onclick="selTag(this, 'LONG')">LONG</div>
+                </div>
+                <button onclick="deploy()" style="padding:0 0;">DEPLOY</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const BASE = "http://162.220.11.5:5000/start";
+        let currentTag = "";
+
+        function selTag(el, val) {
+            // Toggle off if clicking same
+            if (currentTag === val) {
+                currentTag = "";
+                el.classList.remove('active');
+            } else {
+                document.querySelectorAll('.tag-btn').forEach(b => b.classList.remove('active'));
+                currentTag = val;
+                el.classList.add('active');
+            }
+        }
+
+        function getMsLocal(str) {
+            if (!str || str.length < 9) return 0;
+            const y = 2025;
+            const mm = parseInt(str.substr(0,2),10) - 1;
+            const dd = parseInt(str.substr(2,2),10);
+            const hh = parseInt(str.substr(5,2),10);
+            const mi = parseInt(str.substr(7,2),10);
+            const utc = Date.UTC(y, mm, dd, hh, mi);
+            return utc - 8*3600*1000; 
+        }
+
+        function deploy() {
+            const s  = document.getElementById('symbol').value.trim().toUpperCase();
+            let t1 = getMsLocal(document.getElementById('t1').value.trim());
+            const p1 = document.getElementById('p1').value.trim();
+            
+            let t2 = getMsLocal(document.getElementById('t2').value.trim());
+            let p2 = document.getElementById('p2').value.trim();
+
+            if (!s || !p1) {
+                alert("Symbol and Price 1 are required.");
+                return;
+            }
+
+            // AUTO-FILL FOR HORIZONTAL MODE (Only P1 given)
+            if (!p2) {
+                p2 = p1; // Flat line
+                // If T1 is also missing, assume NOW
+                if (t1 <= 0) t1 = Date.now();
+                // If T2 is missing (which it is), make it T1 + 1hr to avoid math errors
+                if (t2 <= 0) t2 = t1 + 3600000; 
+            } else {
+                // Normal mode validation
+                if (t1 <= 0 || t2 <= 0) {
+                    alert("Time fields required for 2-point trend.");
+                    return;
+                }
+            }
+
+            const url = `${BASE}?symbol=${s}&t1=${t1}&p1=${p1}&t2=${t2}&p2=${p2}&tag=${currentTag}`;
+            window.open(url, "_blank");
+        }
+    </script>
+</body>
+</html>
