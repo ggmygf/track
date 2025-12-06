@@ -6,12 +6,19 @@
     <title>Trend Linker</title>
     <style>
         * { box-sizing: border-box; }
-        body { margin: 0; height: 100vh; display: grid; place-items: center; font-family: 'Roboto Mono', monospace; background:#1a1a1a; color:#e0e0e0; }
-        #app { background:#2d2d2d; padding:20px; border-radius:8px; width:360px; display:flex; flex-direction:column; gap:14px; }
+        body { margin: 0; height: 100vh; display: grid; place-items: center; font-family: 'Roboto Mono', monospace; background:#1a1a1a; color:#e0e0e0; position: relative; overflow: hidden; }
+        /* Adjusted #app to account for fixed keyboard space at bottom */
+        #app { background:#2d2d2d; padding:20px; border-radius:8px; width:360px; display:flex; flex-direction:column; gap:14px; margin-bottom: 280px; }
         .grid-container { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
         .input-group { display:flex; flex-direction:column; gap:6px; }
         label { font-size:0.72em; color:#9aa0a6; text-transform:uppercase; letter-spacing:0.04em; }
-        input { background:#3d3d3d; border:1px solid #4d4d4d; color:#fff; padding:10px; width:100%; font-family:inherit; font-size:0.95rem; border-radius:4px; }
+        
+        /* inputmode="none" prevents native mobile keyboard */
+        input { background:#3d3d3d; border:1px solid #4d4d4d; color:#fff; padding:10px; width:100%; font-family:inherit; font-size:0.95rem; border-radius:4px; outline: none; caret-color: #007bff; }
+        
+        /* Highlight selected box logic */
+        input:focus { border: 1px solid #007bff; background: #454545; box-shadow: 0 0 0 2px rgba(0,123,255,0.25); }
+
         button { background:#007bff; color:white; border:none; padding:12px; cursor:pointer; width:100%; font-weight:bold; border-radius:6px; }
         button:hover { filter:brightness(1.1); }
         
@@ -19,17 +26,94 @@
         .tags { display: flex; gap: 5px;}
         .tag-btn { background:#444; color:#aaa; padding: 4px; flex:1; font-size: 0.75rem; text-align: center; border-radius: 4px; cursor: pointer; border:1px solid #555; }
         .tag-btn.active { background:#4fc3f7; color:#000; border-color:#4fc3f7; font-weight: bold; }
+        .acc-right {
+    display: flex;
+    align-items: center;
+    gap: 10px; /* Separator for the new button */
+}
+
+        /* --- KEYPAD STYLES --- */
+        #keypad-container {
+            position: fixed;
+            bottom: 0;
+            width: 100vw;
+            max-width: 360px; /* Aligns with #app width */
+            background: #1c1c1e; /* iOS dark grey */
+            z-index: 1000;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+        }
+
+        /* Accessory Bar */
+        .acc-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #2c2c2e;
+            padding: 6px 10px;
+            height: 40px;
+            border-bottom: 1px solid #3a3a3c;
+        }
+        
+        .acc-arrows { display: flex; gap: 10px; }
+        .acc-btn {
+            background: transparent;
+            color: #007bff;
+            border: none;
+            font-size: 1.2rem;
+            padding: 0 10px;
+            cursor: pointer;
+            width: auto; /* Override global button width */
+            border-radius: 4px;
+        }
+        .acc-btn:active { background: #3a3a3c; }
+
+        .bar-handle {
+            width: 40px;
+            height: 5px;
+            background: #5c5c5e;
+            border-radius: 10px;
+        }
+
+        /* Grid Layout - Packed Mode */
+        .pad-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-gap: 1px; /* The separator lines */
+            background: #3a3a3c; /* Color of the lines */
+            border-top: 1px solid #3a3a3c;
+        }
+
+        .key {
+            background: #464648; /* Grey key color */
+            color: #fff;
+            font-size: 1.5rem;
+            height: 55px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif; /* Native font for numbers */
+            border-radius: 0; /* Square keys */
+            width: 100%; /* Fill grid cell */
+        }
+
+        .key:active { background: #636366; }
+        .key-del { background: #3a3a3c; font-size: 1.2rem; } 
+        .key-dot { background: #3a3a3c; font-weight: bold; padding-bottom: 10px;}
     </style>
 </head>
 <body>
     <div id="app">
         <div class="grid-container">
-            
-            <div class="input-group"><label>Time 1 (MMDD-HHMM)</label><input id="t1" value="1201-2345"/></div>
-            <div class="input-group"><label>Price 1</label><input id="p1" value="83910.8"/></div>
-            <div class="input-group"><label>Time 2 (MMDD-HHMM)</label><input id="t2" value="1202-1700"/></div>
-            <div class="input-group"><label>Price 2</label><input id="p2" value="86414.4"/></div>
-            <div class="input-group"><label>Symbol</label><input id="symbol" value="BTCUSDT"/></div>
+            <div class="input-group"><label>Time 1 (MMDD-HHMM)</label><input id="t1" value="1201-2345" inputmode="none"/></div>
+            <div class="input-group"><label>Price 1</label><input id="p1" value="83910.8" inputmode="none"/></div>
+            <div class="input-group"><label>Time 2 (MMDD-HHMM)</label><input id="t2" value="1202-1700" inputmode="none"/></div>
+            <div class="input-group"><label>Price 2</label><input id="p2" value="86414.4" inputmode="none"/></div>
+            <div class="input-group"><label>Symbol</label><input id="symbol" value="BTCUSDT" inputmode="none"/></div>
             
             <div class="input-group">
                 <label>Tag & Deploy</label>
@@ -43,12 +127,98 @@
         </div>
     </div>
 
+    <div id="keypad-container">
+        <div class="acc-bar">
+            <div class="acc-arrows">
+                <button class="acc-btn" onclick="moveFocus(-1)">&#9650;</button> 
+                <button class="acc-btn" onclick="moveFocus(1)">&#9660;</button>  
+                </div>
+                
+            <div class="bar-handle"></div>
+            <div style="width: 50px;">
+            <div class="acc-right">
+    <button class="acc-btn" onclick="press('-')">&mdash;</button>
+</div>
+            </div> 
+            
+        </div>
+        <div class="pad-grid">
+            <button class="key" onclick="press('1')">1</button>
+            <button class="key" onclick="press('2')">2</button>
+            <button class="key" onclick="press('3')">3</button>
+            <button class="key" onclick="press('4')">4</button>
+            <button class="key" onclick="press('5')">5</button>
+            <button class="key" onclick="press('6')">6</button>
+            <button class="key" onclick="press('7')">7</button>
+            <button class="key" onclick="press('8')">8</button>
+            <button class="key" onclick="press('9')">9</button>
+            <button class="key key-dot" onclick="press('.')">.</button>
+            <button class="key" onclick="press('0')">0</button>
+            <button class="key key-del" onclick="press('del')">&#9003;</button>
+        </div>
+    </div>
+
     <script>
         const BASE = "http://162.220.11.5:5000/start";
         let currentTag = "";
+        
+        // --- KEYPAD LOGIC ---
+        let inputs = document.querySelectorAll('input');
+        let activeIndex = 0; // Default focus index
+
+        // Initialize Focus
+        window.onload = function() {
+            if(inputs.length > 0) {
+                focusInput(0);
+            }
+        };
+
+        // Attach listeners to track manual taps on inputs
+        inputs.forEach((inp, idx) => {
+            inp.addEventListener('click', () => {
+                activeIndex = idx;
+                // Ensure focus visual remains
+                inp.focus(); 
+            });
+            // Prevent physical keyboard typing just in case, though inputmode handles mobile
+            inp.addEventListener('keydown', (e) => {
+               // Optional: Allow default typing if desktop, but instruction implies using this pad.
+               // For strictness, let's allow desktop typing but track focus.
+            });
+        });
+
+        function focusInput(idx) {
+            if (idx < 0) idx = inputs.length - 1;
+            if (idx >= inputs.length) idx = 0;
+            activeIndex = idx;
+            inputs[activeIndex].focus();
+        }
+
+        function moveFocus(dir) {
+            focusInput(activeIndex + dir);
+        }
+
+        function press(key) {
+            let el = inputs[activeIndex];
+            let val = el.value;
+            
+            if (key === 'del') {
+                el.value = val.slice(0, -1);
+            } else if (key === '.') {
+                // Prevent multiple dots if needed, though instruction didn't specify validation
+                if (!val.includes('.')) {
+                     el.value = val + key;
+                }
+            } else {
+                el.value = val + key;
+            }
+            // Trigger input event for any reactive frameworks (optional here but good practice)
+            el.dispatchEvent(new Event('input'));
+        }
+
+        // --- EXISTING LOGIC ---
 
         function selTag(el, val) {
-            // Toggle off if clicking same
             if (currentTag === val) {
                 currentTag = "";
                 el.classList.remove('active');
@@ -83,15 +253,11 @@
                 return;
             }
 
-            // AUTO-FILL FOR HORIZONTAL MODE (Only P1 given)
             if (!p2) {
-                p2 = p1; // Flat line
-                // If T1 is also missing, assume NOW
+                p2 = p1; 
                 if (t1 <= 0) t1 = Date.now();
-                // If T2 is missing (which it is), make it T1 + 1hr to avoid math errors
                 if (t2 <= 0) t2 = t1 + 3600000; 
             } else {
-                // Normal mode validation
                 if (t1 <= 0 || t2 <= 0) {
                     alert("Time fields required for 2-point trend.");
                     return;
